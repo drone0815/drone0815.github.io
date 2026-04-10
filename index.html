@@ -1,3 +1,403 @@
-Hello World
-Hallo Welt
-Welt Hallo
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Wasserschieber"/>
+<meta name="theme-color" content="#0F6E56"/>
+<title>Wasserschieber Kartierung</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#f5f5f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a18}
+  #app{display:flex;flex-direction:column;height:100vh;max-width:520px;margin:0 auto;background:#fff;box-shadow:0 0 30px rgba(0,0,0,.08)}
+  #header{padding:env(safe-area-inset-top,12px) 16px 12px;background:#fff;border-bottom:1px solid #e8e6de;display:flex;align-items:center;gap:10px;padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
+  #header h1{font-size:17px;font-weight:600;flex:1;letter-spacing:-.3px}
+  .badge{font-size:11px;background:#E1F5EE;color:#0F6E56;padding:3px 10px;border-radius:20px;font-weight:500}
+  #tabs{display:flex;border-bottom:1px solid #e8e6de;background:#fff}
+  .tab{flex:1;padding:11px 4px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:#888;border-bottom:2.5px solid transparent;transition:all .2s;user-select:none}
+  .tab.active{color:#0F6E56;border-bottom-color:#0F6E56}
+  #main{flex:1;overflow:hidden;position:relative}
+  .view{display:none;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .view.active{display:flex;flex-direction:column}
+  #map{flex:1;min-height:0}
+
+  /* Capture */
+  #capture-view{padding:16px;gap:12px}
+  #gps-status{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:500}
+  #gps-status.idle{background:#f5f5f0;color:#888}
+  #gps-status.loading{background:#FAEEDA;color:#854F0B}
+  #gps-status.ok{background:#E1F5EE;color:#085041}
+  #gps-status.err{background:#FCEBEB;color:#A32D2D}
+  .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+  .dot.pulse{animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .gps-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .gps-card{background:#f7f6f2;border-radius:10px;padding:12px 14px;border:1px solid #eae8e0}
+  .gps-card label{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px}
+  .gps-val{font-size:14px;font-weight:600;font-family:ui-monospace,'SF Mono',monospace;letter-spacing:-.3px}
+  .field-label{font-size:12px;color:#888;margin-bottom:5px;font-weight:500}
+  .geocode-row{display:flex;gap:8px}
+  .geocode-row input{flex:1}
+  input[type=text]{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:10px;font-size:15px;background:#fff;color:#1a1a18;outline:none;-webkit-appearance:none;appearance:none}
+  input[type=text]:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+  textarea{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:10px;font-size:15px;background:#fff;color:#1a1a18;resize:none;height:76px;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
+  textarea:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+  .btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .15s;-webkit-appearance:none;appearance:none}
+  .btn-primary{background:#0F6E56;color:#fff}
+  .btn-primary:active{background:#085041;transform:scale(.98)}
+  .btn-primary:disabled{background:#c5c3bb;cursor:not-allowed}
+  .btn-secondary{background:#fff;color:#1a1a18;border:1px solid #ddd}
+  .btn-secondary:active{background:#f5f5f0;transform:scale(.98)}
+  .btn-sm{padding:11px 14px;font-size:14px;white-space:nowrap}
+
+  /* List */
+  #list-view{padding:12px;gap:8px}
+  .list-stats{background:#f7f6f2;border-radius:10px;padding:11px 14px;font-size:13px;color:#888;display:flex;justify-content:space-between;align-items:center;border:1px solid #eae8e0}
+  .list-stats strong{color:#1a1a18;font-size:15px}
+  .export-bar{display:flex;gap:8px}
+  .btn-export{background:#E1F5EE;color:#0F6E56;border:1px solid #9FE1CB;font-size:14px;padding:11px;font-weight:600}
+  .btn-export:active{background:#9FE1CB}
+  .entry-card{background:#fff;border:1px solid #eae8e0;border-radius:12px;padding:13px;display:flex;gap:11px;align-items:flex-start}
+  .entry-icon{width:38px;height:38px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px}
+  .entry-info{flex:1;min-width:0}
+  .entry-addr{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .entry-meta{font-size:12px;color:#888;margin-top:3px}
+  .entry-note{font-size:12px;color:#666;margin-top:3px;font-style:italic}
+  .entry-coords{font-size:11px;color:#bbb;font-family:ui-monospace,monospace;margin-top:4px}
+  .entry-del{background:none;border:none;color:#bbb;cursor:pointer;padding:4px;font-size:18px;line-height:1;flex-shrink:0}
+  .entry-del:active{color:#A32D2D}
+  .empty-state{text-align:center;padding:56px 16px;color:#aaa}
+  .empty-state .icon{font-size:44px;margin-bottom:14px}
+  .empty-state p{font-size:14px;line-height:1.6}
+  #count-badge{background:#0F6E56;color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px}
+
+  /* Map legend */
+  .map-legend{position:absolute;bottom:20px;left:10px;background:#fff;border:1px solid #e0ddd5;border-radius:8px;padding:8px 11px;font-size:11px;z-index:999;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .legend-row{display:flex;align-items:center;gap:7px;color:#666}
+  .legend-dot{width:10px;height:10px;border-radius:50%;background:#0F6E56;border:2px solid #fff;box-shadow:0 0 0 1.5px #0F6E56;flex-shrink:0}
+
+  /* Toast */
+  #toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);left:50%;transform:translateX(-50%);background:#0F6E56;color:#fff;padding:11px 22px;border-radius:22px;font-size:14px;font-weight:500;z-index:9999;pointer-events:none;transition:opacity .3s;white-space:nowrap;box-shadow:0 4px 16px rgba(15,110,86,.35)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div style="font-size:24px">🚰</div>
+    <h1>Wasserschieber</h1>
+    <div class="badge">Kartierung</div>
+  </div>
+  <div id="tabs">
+    <div class="tab active" onclick="switchTab('capture')">Erfassen</div>
+    <div class="tab" onclick="switchTab('map')">Karte</div>
+    <div class="tab" onclick="switchTab('list')">Liste <span id="count-badge">0</span></div>
+  </div>
+  <div id="main">
+
+    <!-- Erfassen -->
+    <div id="capture-view" class="view active">
+      <div id="gps-status" class="idle">
+        <div class="dot"></div>
+        <span id="gps-text">GPS nicht aktiv</span>
+      </div>
+      <div class="gps-row">
+        <div class="gps-card">
+          <label>Breitengrad</label>
+          <div class="gps-val" id="lat-val">—</div>
+        </div>
+        <div class="gps-card">
+          <label>Längengrad</label>
+          <div class="gps-val" id="lng-val">—</div>
+        </div>
+      </div>
+      <div class="gps-card">
+        <label>Genauigkeit</label>
+        <div class="gps-val" id="acc-val">—</div>
+      </div>
+      <button class="btn btn-secondary" onclick="getGPS()" id="gps-btn">📍 GPS-Position ermitteln</button>
+      <div>
+        <div class="field-label">Adresse / Bezeichnung</div>
+        <div class="geocode-row">
+          <input type="text" id="addr-input" placeholder="z.B. Hauptstr. 12, Graz" autocomplete="street-address"/>
+          <button class="btn btn-secondary btn-sm" onclick="geocodeAddr()">Suchen</button>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Notiz (optional)</div>
+        <textarea id="note-input" placeholder="z.B. Im Gehsteig, 30 cm Tiefe, Deckel grün..."></textarea>
+      </div>
+      <button class="btn btn-primary" id="save-btn" onclick="saveEntry()" disabled>💾 Schieber speichern</button>
+    </div>
+
+    <!-- Karte -->
+    <div id="map-view" class="view" style="position:relative">
+      <div id="map"></div>
+      <div class="map-legend">
+        <div class="legend-row"><div class="legend-dot"></div> Wasserschieber</div>
+      </div>
+    </div>
+
+    <!-- Liste -->
+    <div id="list-view" class="view">
+      <div id="list-stats" class="list-stats" style="display:none">
+        <span>Gesamt: <strong id="stat-count">0</strong> Einträge</span>
+        <span id="stat-date" style="font-size:11px"></span>
+      </div>
+      <div class="export-bar" id="export-bar" style="display:none">
+        <button class="btn btn-export" style="flex:1" onclick="exportCSV()">⬇ CSV exportieren</button>
+        <button class="btn btn-secondary" style="flex:1;font-size:14px;padding:11px" onclick="copyCSV()">📋 Kopieren</button>
+      </div>
+      <div id="list-content"></div>
+    </div>
+
+  </div>
+</div>
+<div id="toast" style="opacity:0"></div>
+
+<script>
+var lat=null,lng=null,acc=null;
+var entries=[];
+var map=null,markersLayer=null;
+
+function initStorage(){
+  try{var d=localStorage.getItem('ws_entries');if(d)entries=JSON.parse(d);}catch(e){entries=[];}
+  updateCount();
+}
+function saveStorage(){try{localStorage.setItem('ws_entries',JSON.stringify(entries));}catch(e){}}
+function updateCount(){document.getElementById('count-badge').textContent=entries.length;}
+
+function switchTab(tab){
+  ['capture','map','list'].forEach(function(t,i){
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
+  });
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+  document.getElementById(tab+'-view').classList.add('active');
+  if(tab==='map'){setTimeout(function(){if(!map)initMap();else{map.invalidateSize();refreshMarkers();}},120);}
+  if(tab==='list')renderList();
+}
+
+function setGPSStatus(type,text){
+  var el=document.getElementById('gps-status');
+  el.className=type;
+  el.querySelector('.dot').classList.toggle('pulse',type==='loading');
+  document.getElementById('gps-text').textContent=text;
+}
+
+function getGPS(){
+  if(!navigator.geolocation){setGPSStatus('err','GPS nicht unterstützt');return;}
+  setGPSStatus('loading','GPS wird ermittelt…');
+  document.getElementById('gps-btn').disabled=true;
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      lat=pos.coords.latitude;
+      lng=pos.coords.longitude;
+      acc=pos.coords.accuracy;
+      document.getElementById('lat-val').textContent=lat.toFixed(6);
+      document.getElementById('lng-val').textContent=lng.toFixed(6);
+      document.getElementById('acc-val').textContent=Math.round(acc)+' m';
+      setGPSStatus('ok','Position ermittelt ✓');
+      document.getElementById('gps-btn').disabled=false;
+      tryGeocode(lat,lng);
+      checkSaveBtn();
+    },
+    function(err){
+      var msg={1:'Zugriff verweigert',2:'Position nicht verfügbar',3:'Zeitüberschreitung'};
+      setGPSStatus('err','Fehler: '+(msg[err.code]||err.message));
+      document.getElementById('gps-btn').disabled=false;
+    },
+    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+}
+
+function tryGeocode(lt,ln){
+  fetch('https://nominatim.openstreetmap.org/reverse?lat='+lt+'&lon='+ln+'&format=json&accept-language=de')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.display_name){
+        var parts=d.display_name.split(',');
+        var short=parts.slice(0,3).join(', ').trim();
+        var inp=document.getElementById('addr-input');
+        if(!inp.value)inp.value=short;
+      }
+    }).catch(function(){});
+}
+
+function geocodeAddr(){
+  var q=document.getElementById('addr-input').value.trim();
+  if(!q)return;
+  setGPSStatus('loading','Adresse wird gesucht…');
+  fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=1&accept-language=de')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.length>0){
+        lat=parseFloat(d[0].lat);lng=parseFloat(d[0].lon);acc=null;
+        document.getElementById('lat-val').textContent=lat.toFixed(6);
+        document.getElementById('lng-val').textContent=lng.toFixed(6);
+        document.getElementById('acc-val').textContent='— (aus Adresse)';
+        setGPSStatus('ok','Adresse gefunden ✓');
+        checkSaveBtn();
+      }else{setGPSStatus('err','Adresse nicht gefunden');}
+    }).catch(function(){setGPSStatus('err','Netzwerkfehler');});
+}
+
+function checkSaveBtn(){
+  document.getElementById('save-btn').disabled=!(lat&&lng);
+}
+
+function saveEntry(){
+  if(!lat||!lng)return;
+  var addr=document.getElementById('addr-input').value.trim()||(lat.toFixed(5)+', '+lng.toFixed(5));
+  var note=document.getElementById('note-input').value.trim();
+  var now=new Date();
+  var entry={
+    id:now.getTime(),lat:lat,lng:lng,
+    acc:acc?Math.round(acc):null,
+    addr:addr,note:note,
+    ts:now.toLocaleString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    isoTs:now.toISOString()
+  };
+  entries.unshift(entry);
+  saveStorage();updateCount();
+  document.getElementById('addr-input').value='';
+  document.getElementById('note-input').value='';
+  lat=null;lng=null;acc=null;
+  document.getElementById('lat-val').textContent='—';
+  document.getElementById('lng-val').textContent='—';
+  document.getElementById('acc-val').textContent='—';
+  setGPSStatus('idle','GPS nicht aktiv');
+  document.getElementById('save-btn').disabled=true;
+  showToast('Schieber gespeichert! 🚰');
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(function(){t.style.opacity='0';},2800);
+}
+
+function buildCSV(){
+  var BOM='\uFEFF';
+  var header=['ID','Adresse','Breitengrad','Längengrad','Genauigkeit_m','Notiz','Erfasst_am','ISO_Zeitstempel'];
+  var rows=entries.map(function(e){
+    return [
+      e.id,
+      '"'+(e.addr||'').replace(/"/g,'""')+'"',
+      e.lat.toFixed(8),
+      e.lng.toFixed(8),
+      e.acc!=null?e.acc:'',
+      '"'+(e.note||'').replace(/"/g,'""')+'"',
+      '"'+e.ts+'"',
+      e.isoTs||''
+    ].join(';');
+  });
+  return BOM+[header.join(';')].concat(rows).join('\r\n');
+}
+
+function exportCSV(){
+  if(entries.length===0){showToast('Keine Einträge vorhanden');return;}
+  var csv=buildCSV();
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var date=new Date().toISOString().slice(0,10);
+  a.href=url;a.download='wasserschieber_'+date+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},300);
+  showToast('CSV wird heruntergeladen…');
+}
+
+function copyCSV(){
+  if(entries.length===0){showToast('Keine Einträge vorhanden');return;}
+  var csv=buildCSV();
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(csv).then(function(){showToast('CSV kopiert!');}).catch(function(){fallbackCopy(csv);});
+  }else{fallbackCopy(csv);}
+}
+
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showToast('CSV kopiert!');}catch(e){showToast('Kopieren nicht möglich');}
+  document.body.removeChild(ta);
+}
+
+function initMap(){
+  map=L.map('map',{zoomControl:true,attributionControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:19
+  }).addTo(map);
+  markersLayer=L.layerGroup().addTo(map);
+  refreshMarkers();
+  if(entries.length===0)map.setView([47.0707,15.4395],13);
+}
+
+var wsIcon=null;
+function getIcon(){
+  if(!wsIcon){
+    wsIcon=L.divIcon({
+      html:'<div style="width:30px;height:30px;background:#0F6E56;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:14px">🚰</div>',
+      iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-15],className:''
+    });
+  }
+  return wsIcon;
+}
+
+function refreshMarkers(){
+  if(!map||!markersLayer)return;
+  markersLayer.clearLayers();
+  if(entries.length===0)return;
+  var bounds=[];
+  entries.forEach(function(e){
+    var m=L.marker([e.lat,e.lng],{icon:getIcon()});
+    var pop='<b style="font-size:13px">'+e.addr+'</b><br><span style="font-size:11px;color:#888">'+e.ts+'</span>'+(e.acc?'<br><span style="font-size:11px;color:#aaa">± '+e.acc+' m</span>':'')+(e.note?'<br><span style="font-size:12px;color:#555">'+e.note+'</span>':'');
+    m.bindPopup(pop);
+    m.addTo(markersLayer);
+    bounds.push([e.lat,e.lng]);
+  });
+  if(bounds.length)map.fitBounds(bounds,{padding:[40,40],maxZoom:17});
+}
+
+function renderList(){
+  var bar=document.getElementById('export-bar');
+  var stats=document.getElementById('list-stats');
+  var c=document.getElementById('list-content');
+  if(entries.length===0){
+    bar.style.display='none';stats.style.display='none';
+    c.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>Noch keine Wasserschieber erfasst.<br>Tippe auf "Erfassen" um zu beginnen.</p></div>';
+    return;
+  }
+  bar.style.display='flex';stats.style.display='flex';
+  document.getElementById('stat-count').textContent=entries.length;
+  document.getElementById('stat-date').textContent='Letzter: '+entries[0].ts;
+  c.innerHTML=entries.map(function(e){
+    return '<div class="entry-card" id="ec'+e.id+'">'
+      +'<div class="entry-icon">🚰</div>'
+      +'<div class="entry-info">'
+      +'<div class="entry-addr">'+e.addr+'</div>'
+      +'<div class="entry-meta">'+e.ts+(e.acc?' &middot; &plusmn;'+e.acc+'m':'')+'</div>'
+      +(e.note?'<div class="entry-note">'+e.note+'</div>':'')
+      +'<div class="entry-coords">'+e.lat.toFixed(6)+', '+e.lng.toFixed(6)+'</div>'
+      +'</div>'
+      +'<button class="entry-del" onclick="deleteEntry('+e.id+')" title="Löschen">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function deleteEntry(id){
+  if(!confirm('Eintrag wirklich löschen?'))return;
+  entries=entries.filter(function(e){return e.id!==id;});
+  saveStorage();updateCount();renderList();
+  if(map)refreshMarkers();
+}
+
+initStorage();
+</script>
+</body>
+</html>
