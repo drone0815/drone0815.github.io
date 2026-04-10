@@ -12,77 +12,108 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;overflow:hidden;background:#f5f5f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a18}
-  #app{display:flex;flex-direction:column;height:100vh;max-width:520px;margin:0 auto;background:#fff;box-shadow:0 0 30px rgba(0,0,0,.08)}
-  #header{padding:env(safe-area-inset-top,12px) 16px 12px;background:#fff;border-bottom:1px solid #e8e6de;display:flex;align-items:center;gap:10px;padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
-  #header h1{font-size:17px;font-weight:600;flex:1;letter-spacing:-.3px}
-  .badge{font-size:11px;background:#E1F5EE;color:#0F6E56;padding:3px 10px;border-radius:20px;font-weight:500}
-  #tabs{display:flex;border-bottom:1px solid #e8e6de;background:#fff}
-  .tab{flex:1;padding:11px 4px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:#888;border-bottom:2.5px solid transparent;transition:all .2s;user-select:none}
-  .tab.active{color:#0F6E56;border-bottom-color:#0F6E56}
-  #main{flex:1;overflow:hidden;position:relative}
-  .view{display:none;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  .view.active{display:flex;flex-direction:column}
-  #map{flex:1;min-height:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#f5f5f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a18}
+#app{display:flex;flex-direction:column;height:100vh;max-width:520px;margin:0 auto;background:#fff;box-shadow:0 0 30px rgba(0,0,0,.08)}
+#header{padding:env(safe-area-inset-top,12px) 16px 12px;background:#fff;border-bottom:1px solid #e8e6de;display:flex;align-items:center;gap:10px;padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
+#header h1{font-size:17px;font-weight:600;flex:1;letter-spacing:-.3px}
+.badge{font-size:11px;background:#E1F5EE;color:#0F6E56;padding:3px 10px;border-radius:20px;font-weight:500}
+#tabs{display:flex;border-bottom:1px solid #e8e6de;background:#fff}
+.tab{flex:1;padding:11px 4px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:#888;border-bottom:2.5px solid transparent;transition:all .2s;user-select:none}
+.tab.active{color:#0F6E56;border-bottom-color:#0F6E56}
+#main{flex:1;overflow:hidden;position:relative}
+.view{display:none;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.view.active{display:flex;flex-direction:column}
+#map{flex:1;min-height:0}
 
-  /* Capture */
-  #capture-view{padding:16px;gap:12px}
-  #gps-status{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:500}
-  #gps-status.idle{background:#f5f5f0;color:#888}
-  #gps-status.loading{background:#FAEEDA;color:#854F0B}
-  #gps-status.ok{background:#E1F5EE;color:#085041}
-  #gps-status.err{background:#FCEBEB;color:#A32D2D}
-  .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
-  .dot.pulse{animation:pulse 1s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-  .gps-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .gps-card{background:#f7f6f2;border-radius:10px;padding:12px 14px;border:1px solid #eae8e0}
-  .gps-card label{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px}
-  .gps-val{font-size:14px;font-weight:600;font-family:ui-monospace,'SF Mono',monospace;letter-spacing:-.3px}
-  .field-label{font-size:12px;color:#888;margin-bottom:5px;font-weight:500}
-  .geocode-row{display:flex;gap:8px}
-  .geocode-row input{flex:1}
-  input[type=text]{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:10px;font-size:15px;background:#fff;color:#1a1a18;outline:none;-webkit-appearance:none;appearance:none}
-  input[type=text]:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
-  textarea{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:10px;font-size:15px;background:#fff;color:#1a1a18;resize:none;height:76px;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
-  textarea:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
-  .btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .15s;-webkit-appearance:none;appearance:none}
-  .btn-primary{background:#0F6E56;color:#fff}
-  .btn-primary:active{background:#085041;transform:scale(.98)}
-  .btn-primary:disabled{background:#c5c3bb;cursor:not-allowed}
-  .btn-secondary{background:#fff;color:#1a1a18;border:1px solid #ddd}
-  .btn-secondary:active{background:#f5f5f0;transform:scale(.98)}
-  .btn-sm{padding:11px 14px;font-size:14px;white-space:nowrap}
+/* GPS Status */
+#gps-status{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:500}
+#gps-status.idle{background:#f5f5f0;color:#888}
+#gps-status.loading{background:#FAEEDA;color:#854F0B}
+#gps-status.ok{background:#E1F5EE;color:#085041}
+#gps-status.err{background:#FCEBEB;color:#A32D2D}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.dot.pulse{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
-  /* List */
-  #list-view{padding:12px;gap:8px}
-  .list-stats{background:#f7f6f2;border-radius:10px;padding:11px 14px;font-size:13px;color:#888;display:flex;justify-content:space-between;align-items:center;border:1px solid #eae8e0}
-  .list-stats strong{color:#1a1a18;font-size:15px}
-  .export-bar{display:flex;gap:8px}
-  .btn-export{background:#E1F5EE;color:#0F6E56;border:1px solid #9FE1CB;font-size:14px;padding:11px;font-weight:600}
-  .btn-export:active{background:#9FE1CB}
-  .entry-card{background:#fff;border:1px solid #eae8e0;border-radius:12px;padding:13px;display:flex;gap:11px;align-items:flex-start}
-  .entry-icon{width:38px;height:38px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px}
-  .entry-info{flex:1;min-width:0}
-  .entry-addr{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .entry-meta{font-size:12px;color:#888;margin-top:3px}
-  .entry-note{font-size:12px;color:#666;margin-top:3px;font-style:italic}
-  .entry-coords{font-size:11px;color:#bbb;font-family:ui-monospace,monospace;margin-top:4px}
-  .entry-del{background:none;border:none;color:#bbb;cursor:pointer;padding:4px;font-size:18px;line-height:1;flex-shrink:0}
-  .entry-del:active{color:#A32D2D}
-  .empty-state{text-align:center;padding:56px 16px;color:#aaa}
-  .empty-state .icon{font-size:44px;margin-bottom:14px}
-  .empty-state p{font-size:14px;line-height:1.6}
-  #count-badge{background:#0F6E56;color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px}
+/* GPS Karten */
+#capture-view{padding:16px;gap:12px}
+.gps-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gps-card{background:#f7f6f2;border-radius:10px;padding:12px 14px;border:1px solid #eae8e0}
+.gps-card label{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px}
+.gps-val{font-size:14px;font-weight:600;font-family:ui-monospace,'SF Mono',monospace;letter-spacing:-.3px}
 
-  /* Map legend */
-  .map-legend{position:absolute;bottom:20px;left:10px;background:#fff;border:1px solid #e0ddd5;border-radius:8px;padding:8px 11px;font-size:11px;z-index:999;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-  .legend-row{display:flex;align-items:center;gap:7px;color:#666}
-  .legend-dot{width:10px;height:10px;border-radius:50%;background:#0F6E56;border:2px solid #fff;box-shadow:0 0 0 1.5px #0F6E56;flex-shrink:0}
+/* Genauigkeits-Fortschritt */
+#acc-panel{background:#f7f6f2;border-radius:12px;padding:14px;border:1px solid #eae8e0}
+#acc-panel .panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+#acc-panel .panel-title{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px}
+#acc-current{font-size:22px;font-weight:700;font-family:ui-monospace,monospace}
+#acc-current.bad{color:#A32D2D}
+#acc-current.mid{color:#854F0B}
+#acc-current.good{color:#0F6E56}
+.progress-bar-bg{background:#e0ded6;border-radius:6px;height:8px;overflow:hidden;margin-bottom:8px}
+.progress-bar-fill{height:100%;border-radius:6px;transition:width .4s ease,background .4s ease}
+.acc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.acc-stat{text-align:center}
+.acc-stat .val{font-size:13px;font-weight:600;font-family:ui-monospace,monospace}
+.acc-stat .lbl{font-size:10px;color:#aaa;margin-top:2px}
+.samples-info{font-size:12px;color:#888;text-align:center;margin-top:8px}
 
-  /* Toast */
-  #toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);left:50%;transform:translateX(-50%);background:#0F6E56;color:#fff;padding:11px 22px;border-radius:22px;font-size:14px;font-weight:500;z-index:9999;pointer-events:none;transition:opacity .3s;white-space:nowrap;box-shadow:0 4px 16px rgba(15,110,86,.35)}
+/* Ziel-Genauigkeit Auswahl */
+.target-row{display:flex;align-items:center;gap:10px}
+.target-row label{font-size:12px;color:#888;font-weight:500;white-space:nowrap}
+.seg-ctrl{display:flex;background:#f0efe9;border-radius:8px;padding:3px;gap:2px;flex:1}
+.seg-btn{flex:1;padding:6px 4px;font-size:12px;font-weight:600;border:none;background:transparent;border-radius:6px;cursor:pointer;color:#888;transition:all .15s}
+.seg-btn.active{background:#fff;color:#0F6E56;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .15s;-webkit-appearance:none}
+.btn-primary{background:#0F6E56;color:#fff}
+.btn-primary:active{background:#085041;transform:scale(.98)}
+.btn-primary:disabled{background:#c5c3bb;cursor:not-allowed}
+.btn-danger{background:#FCEBEB;color:#A32D2D;border:1px solid #F7C1C1}
+.btn-danger:active{background:#F7C1C1}
+.btn-secondary{background:#fff;color:#1a1a18;border:1px solid #ddd}
+.btn-secondary:active{background:#f5f5f0;transform:scale(.98)}
+.btn-sm{padding:11px 14px;font-size:14px;white-space:nowrap}
+
+/* Felder */
+.field-label{font-size:12px;color:#888;margin-bottom:5px;font-weight:500}
+.geocode-row{display:flex;gap:8px}
+.geocode-row input{flex:1}
+input[type=text]{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:10px;font-size:15px;background:#fff;color:#1a1a18;outline:none;-webkit-appearance:none}
+input[type=text]:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+textarea{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:10px;font-size:15px;background:#fff;color:#1a1a18;resize:none;height:76px;font-family:inherit;outline:none;-webkit-appearance:none}
+textarea:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+
+/* Liste */
+#list-view{padding:12px;gap:8px}
+.list-stats{background:#f7f6f2;border-radius:10px;padding:11px 14px;font-size:13px;color:#888;display:flex;justify-content:space-between;align-items:center;border:1px solid #eae8e0}
+.list-stats strong{color:#1a1a18;font-size:15px}
+.export-bar{display:flex;gap:8px}
+.btn-export{background:#E1F5EE;color:#0F6E56;border:1px solid #9FE1CB;font-size:14px;padding:11px;font-weight:600}
+.btn-export:active{background:#9FE1CB}
+.entry-card{background:#fff;border:1px solid #eae8e0;border-radius:12px;padding:13px;display:flex;gap:11px;align-items:flex-start}
+.entry-icon{width:38px;height:38px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px}
+.entry-info{flex:1;min-width:0}
+.entry-addr{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry-meta{font-size:12px;color:#888;margin-top:3px}
+.entry-note{font-size:12px;color:#666;margin-top:3px;font-style:italic}
+.entry-coords{font-size:11px;color:#bbb;font-family:ui-monospace,monospace;margin-top:4px}
+.entry-del{background:none;border:none;color:#bbb;cursor:pointer;padding:4px;font-size:18px;line-height:1;flex-shrink:0}
+.entry-del:active{color:#A32D2D}
+.empty-state{text-align:center;padding:56px 16px;color:#aaa}
+.empty-state .icon{font-size:44px;margin-bottom:14px}
+.empty-state p{font-size:14px;line-height:1.6}
+#count-badge{background:#0F6E56;color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px}
+
+/* Karte */
+.map-legend{position:absolute;bottom:20px;left:10px;background:#fff;border:1px solid #e0ddd5;border-radius:8px;padding:8px 11px;font-size:11px;z-index:999;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.legend-row{display:flex;align-items:center;gap:7px;color:#666}
+.legend-dot{width:10px;height:10px;border-radius:50%;background:#0F6E56;border:2px solid #fff;box-shadow:0 0 0 1.5px #0F6E56;flex-shrink:0}
+
+/* Toast */
+#toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);left:50%;transform:translateX(-50%);background:#0F6E56;color:#fff;padding:11px 22px;border-radius:22px;font-size:14px;font-weight:500;z-index:9999;pointer-events:none;transition:opacity .3s;white-space:nowrap;box-shadow:0 4px 16px rgba(15,110,86,.35)}
 </style>
 </head>
 <body>
@@ -103,8 +134,40 @@
     <div id="capture-view" class="view active">
       <div id="gps-status" class="idle">
         <div class="dot"></div>
-        <span id="gps-text">GPS nicht aktiv</span>
+        <span id="gps-text">GPS nicht aktiv – Messung starten</span>
       </div>
+
+      <!-- Zielgenauigkeit -->
+      <div>
+        <div class="field-label">Zielgenauigkeit</div>
+        <div class="target-row">
+          <div class="seg-ctrl">
+            <button class="seg-btn" onclick="setTarget(10)">±10m</button>
+            <button class="seg-btn active" onclick="setTarget(5)">±5m</button>
+            <button class="seg-btn" onclick="setTarget(3)">±3m</button>
+            <button class="seg-btn" onclick="setTarget(1)">±1m</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Genauigkeits-Panel -->
+      <div id="acc-panel">
+        <div class="panel-header">
+          <span class="panel-title">Genauigkeit</span>
+          <span id="acc-current" class="bad">— m</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width:0%;background:#0F6E56"></div>
+        </div>
+        <div class="acc-stats">
+          <div class="acc-stat"><div class="val" id="stat-best">—</div><div class="lbl">Beste</div></div>
+          <div class="acc-stat"><div class="val" id="stat-avg">—</div><div class="lbl">Mittelwert</div></div>
+          <div class="acc-stat"><div class="val" id="stat-samples">0</div><div class="lbl">Messungen</div></div>
+        </div>
+        <div class="samples-info" id="samples-info">Messung starten um GPS-Genauigkeit zu verbessern</div>
+      </div>
+
+      <!-- Koordinaten -->
       <div class="gps-row">
         <div class="gps-card">
           <label>Breitengrad</label>
@@ -115,11 +178,14 @@
           <div class="gps-val" id="lng-val">—</div>
         </div>
       </div>
-      <div class="gps-card">
-        <label>Genauigkeit</label>
-        <div class="gps-val" id="acc-val">—</div>
+
+      <!-- GPS Buttons -->
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="startGPS()" id="gps-start-btn">📍 Messung starten</button>
+        <button class="btn btn-danger" style="flex:0 0 auto;width:auto;padding:13px 16px;font-size:14px" onclick="stopGPS()" id="gps-stop-btn" disabled>⏹ Stop</button>
       </div>
-      <button class="btn btn-secondary" onclick="getGPS()" id="gps-btn">📍 GPS-Position ermitteln</button>
+
+      <!-- Adresse -->
       <div>
         <div class="field-label">Adresse / Bezeichnung</div>
         <div class="geocode-row">
@@ -127,10 +193,13 @@
           <button class="btn btn-secondary btn-sm" onclick="geocodeAddr()">Suchen</button>
         </div>
       </div>
+
+      <!-- Notiz -->
       <div>
         <div class="field-label">Notiz (optional)</div>
         <textarea id="note-input" placeholder="z.B. Im Gehsteig, 30 cm Tiefe, Deckel grün..."></textarea>
       </div>
+
       <button class="btn btn-primary" id="save-btn" onclick="saveEntry()" disabled>💾 Schieber speichern</button>
     </div>
 
@@ -154,16 +223,21 @@
       </div>
       <div id="list-content"></div>
     </div>
-
   </div>
 </div>
 <div id="toast" style="opacity:0"></div>
 
 <script>
-var lat=null,lng=null,acc=null;
+// ── State ──────────────────────────────────────────────
+var lat=null, lng=null, bestAcc=null;
+var targetAcc=5;
+var watchId=null;
+var samples=[];
 var entries=[];
-var map=null,markersLayer=null;
+var map=null, markersLayer=null;
+var autoStopped=false;
 
+// ── Storage ────────────────────────────────────────────
 function initStorage(){
   try{var d=localStorage.getItem('ws_entries');if(d)entries=JSON.parse(d);}catch(e){entries=[];}
   updateCount();
@@ -171,6 +245,7 @@ function initStorage(){
 function saveStorage(){try{localStorage.setItem('ws_entries',JSON.stringify(entries));}catch(e){}}
 function updateCount(){document.getElementById('count-badge').textContent=entries.length;}
 
+// ── Tabs ───────────────────────────────────────────────
 function switchTab(tab){
   ['capture','map','list'].forEach(function(t,i){
     document.querySelectorAll('.tab')[i].classList.toggle('active',t===tab);
@@ -181,6 +256,15 @@ function switchTab(tab){
   if(tab==='list')renderList();
 }
 
+// ── Zielgenauigkeit ────────────────────────────────────
+function setTarget(val){
+  targetAcc=val;
+  document.querySelectorAll('.seg-btn').forEach(function(b){
+    b.classList.toggle('active', b.textContent==='±'+val+'m');
+  });
+}
+
+// ── GPS Status ─────────────────────────────────────────
 function setGPSStatus(type,text){
   var el=document.getElementById('gps-status');
   el.className=type;
@@ -188,32 +272,119 @@ function setGPSStatus(type,text){
   document.getElementById('gps-text').textContent=text;
 }
 
-function getGPS(){
+// ── GPS Messung ────────────────────────────────────────
+function startGPS(){
   if(!navigator.geolocation){setGPSStatus('err','GPS nicht unterstützt');return;}
-  setGPSStatus('loading','GPS wird ermittelt…');
-  document.getElementById('gps-btn').disabled=true;
-  navigator.geolocation.getCurrentPosition(
-    function(pos){
-      lat=pos.coords.latitude;
-      lng=pos.coords.longitude;
-      acc=pos.coords.accuracy;
-      document.getElementById('lat-val').textContent=lat.toFixed(6);
-      document.getElementById('lng-val').textContent=lng.toFixed(6);
-      document.getElementById('acc-val').textContent=Math.round(acc)+' m';
-      setGPSStatus('ok','Position ermittelt ✓');
-      document.getElementById('gps-btn').disabled=false;
-      tryGeocode(lat,lng);
-      checkSaveBtn();
-    },
-    function(err){
-      var msg={1:'Zugriff verweigert',2:'Position nicht verfügbar',3:'Zeitüberschreitung'};
-      setGPSStatus('err','Fehler: '+(msg[err.code]||err.message));
-      document.getElementById('gps-btn').disabled=false;
-    },
-    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  samples=[];
+  bestAcc=null;
+  autoStopped=false;
+  updateAccPanel(null,0);
+  setGPSStatus('loading','GPS-Messung läuft…');
+  document.getElementById('gps-start-btn').disabled=true;
+  document.getElementById('gps-stop-btn').disabled=false;
+  document.getElementById('save-btn').disabled=true;
+
+  watchId=navigator.geolocation.watchPosition(
+    onGPSSuccess,
+    onGPSError,
+    {enableHighAccuracy:true, timeout:20000, maximumAge:0}
   );
 }
 
+function stopGPS(){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  document.getElementById('gps-start-btn').disabled=false;
+  document.getElementById('gps-stop-btn').disabled=true;
+  if(samples.length>0){
+    var avg=computeAvg();
+    lat=avg.lat; lng=avg.lng; bestAcc=avg.acc;
+    document.getElementById('lat-val').textContent=lat.toFixed(6);
+    document.getElementById('lng-val').textContent=lng.toFixed(6);
+    setGPSStatus('ok','Messung beendet · '+samples.length+' Samples');
+    document.getElementById('save-btn').disabled=false;
+    if(!autoStopped) tryGeocode(lat,lng);
+  }else{
+    setGPSStatus('idle','Messung abgebrochen');
+  }
+}
+
+function onGPSSuccess(pos){
+  var a=pos.coords.accuracy;
+  var la=pos.coords.latitude;
+  var lo=pos.coords.longitude;
+
+  // Nur Samples unter 50m aufnehmen, max 60
+  if(a<=50 && samples.length<60){
+    samples.push({lat:la,lng:lo,acc:a});
+  }
+
+  var avg=samples.length>0?computeAvg():null;
+  var currentAcc=avg?avg.acc:a;
+  if(!bestAcc||a<bestAcc)bestAcc=a;
+
+  updateAccPanel(a, samples.length, avg);
+
+  // Auto-Stop wenn Ziel erreicht und mind. 5 Samples
+  if(currentAcc<=targetAcc && samples.length>=5){
+    autoStopped=true;
+    stopGPS();
+    showToast('Zielgenauigkeit ±'+targetAcc+'m erreicht! ✓');
+    tryGeocode(avg.lat,avg.lng);
+  }
+}
+
+function onGPSError(err){
+  var msg={1:'Zugriff verweigert – bitte GPS erlauben',2:'Position nicht verfügbar',3:'Zeitüberschreitung'};
+  setGPSStatus('err',msg[err.code]||'GPS-Fehler');
+  document.getElementById('gps-start-btn').disabled=false;
+  document.getElementById('gps-stop-btn').disabled=true;
+}
+
+function computeAvg(){
+  if(samples.length===0)return null;
+  // Gewichteter Mittelwert: bessere Genauigkeit = mehr Gewicht
+  var wLat=0,wLng=0,wAcc=0,wSum=0;
+  samples.forEach(function(s){
+    var w=1/(s.acc*s.acc);
+    wLat+=s.lat*w; wLng+=s.lng*w; wAcc+=s.acc*w; wSum+=w;
+  });
+  return {lat:wLat/wSum, lng:wLng/wSum, acc:wAcc/wSum};
+}
+
+function updateAccPanel(currentAcc, count, avg){
+  var cur=document.getElementById('acc-current');
+  var fill=document.getElementById('progress-fill');
+  var info=document.getElementById('samples-info');
+
+  var dispAcc=avg?avg.acc:currentAcc;
+  if(dispAcc!==null){
+    cur.textContent=dispAcc.toFixed(1)+' m';
+    if(dispAcc<=targetAcc){cur.className='good';}
+    else if(dispAcc<=targetAcc*3){cur.className='mid';}
+    else{cur.className='bad';}
+
+    // Fortschritt: 0% = 50m, 100% = Ziel
+    var pct=Math.min(100,Math.max(0,(50-dispAcc)/(50-targetAcc)*100));
+    fill.style.width=pct+'%';
+    fill.style.background=dispAcc<=targetAcc?'#0F6E56':dispAcc<=targetAcc*3?'#854F0B':'#A32D2D';
+  }
+
+  document.getElementById('stat-samples').textContent=count;
+
+  if(bestAcc!==null) document.getElementById('stat-best').textContent=bestAcc.toFixed(1)+'m';
+  if(avg) document.getElementById('stat-avg').textContent=avg.acc.toFixed(1)+'m';
+
+  if(count===0){
+    info.textContent='Warte auf GPS-Signal…';
+  }else if(dispAcc && dispAcc>targetAcc){
+    var remaining=Math.max(0,Math.ceil((targetAcc-dispAcc)*-2));
+    info.textContent=count+' Messungen · Ziel ±'+targetAcc+'m · noch ca. '+remaining+'s';
+  }else{
+    info.textContent=count+' Messungen · Zielgenauigkeit erreicht ✓';
+  }
+}
+
+// ── Geocoding ──────────────────────────────────────────
 function tryGeocode(lt,ln){
   fetch('https://nominatim.openstreetmap.org/reverse?lat='+lt+'&lon='+ln+'&format=json&accept-language=de')
     .then(function(r){return r.json();})
@@ -235,45 +406,51 @@ function geocodeAddr(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(d&&d.length>0){
-        lat=parseFloat(d[0].lat);lng=parseFloat(d[0].lon);acc=null;
+        lat=parseFloat(d[0].lat);lng=parseFloat(d[0].lon);bestAcc=null;
         document.getElementById('lat-val').textContent=lat.toFixed(6);
         document.getElementById('lng-val').textContent=lng.toFixed(6);
-        document.getElementById('acc-val').textContent='— (aus Adresse)';
         setGPSStatus('ok','Adresse gefunden ✓');
-        checkSaveBtn();
+        document.getElementById('save-btn').disabled=false;
       }else{setGPSStatus('err','Adresse nicht gefunden');}
     }).catch(function(){setGPSStatus('err','Netzwerkfehler');});
 }
 
-function checkSaveBtn(){
-  document.getElementById('save-btn').disabled=!(lat&&lng);
-}
-
+// ── Speichern ──────────────────────────────────────────
 function saveEntry(){
   if(!lat||!lng)return;
   var addr=document.getElementById('addr-input').value.trim()||(lat.toFixed(5)+', '+lng.toFixed(5));
   var note=document.getElementById('note-input').value.trim();
   var now=new Date();
   var entry={
-    id:now.getTime(),lat:lat,lng:lng,
-    acc:acc?Math.round(acc):null,
-    addr:addr,note:note,
+    id:now.getTime(), lat:lat, lng:lng,
+    acc:bestAcc?parseFloat(bestAcc.toFixed(2)):null,
+    samples:samples.length,
+    addr:addr, note:note,
     ts:now.toLocaleString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
     isoTs:now.toISOString()
   };
   entries.unshift(entry);
   saveStorage();updateCount();
+  // Reset
   document.getElementById('addr-input').value='';
   document.getElementById('note-input').value='';
-  lat=null;lng=null;acc=null;
+  lat=null;lng=null;bestAcc=null;samples=[];
   document.getElementById('lat-val').textContent='—';
   document.getElementById('lng-val').textContent='—';
-  document.getElementById('acc-val').textContent='—';
-  setGPSStatus('idle','GPS nicht aktiv');
+  document.getElementById('acc-current').textContent='— m';
+  document.getElementById('acc-current').className='bad';
+  document.getElementById('progress-fill').style.width='0%';
+  document.getElementById('stat-best').textContent='—';
+  document.getElementById('stat-avg').textContent='—';
+  document.getElementById('stat-samples').textContent='0';
+  document.getElementById('samples-info').textContent='Messung starten um GPS-Genauigkeit zu verbessern';
+  setGPSStatus('idle','GPS nicht aktiv – Messung starten');
   document.getElementById('save-btn').disabled=true;
+  document.getElementById('gps-start-btn').disabled=false;
   showToast('Schieber gespeichert! 🚰');
 }
 
+// ── Toast ──────────────────────────────────────────────
 function showToast(msg){
   var t=document.getElementById('toast');
   t.textContent=msg;t.style.opacity='1';
@@ -281,9 +458,10 @@ function showToast(msg){
   t._timer=setTimeout(function(){t.style.opacity='0';},2800);
 }
 
+// ── CSV ────────────────────────────────────────────────
 function buildCSV(){
   var BOM='\uFEFF';
-  var header=['ID','Adresse','Breitengrad','Längengrad','Genauigkeit_m','Notiz','Erfasst_am','ISO_Zeitstempel'];
+  var header=['ID','Adresse','Breitengrad','Längengrad','Genauigkeit_m','Anzahl_Samples','Notiz','Erfasst_am','ISO_Zeitstempel'];
   var rows=entries.map(function(e){
     return [
       e.id,
@@ -291,6 +469,7 @@ function buildCSV(){
       e.lat.toFixed(8),
       e.lng.toFixed(8),
       e.acc!=null?e.acc:'',
+      e.samples||'',
       '"'+(e.note||'').replace(/"/g,'""')+'"',
       '"'+e.ts+'"',
       e.isoTs||''
@@ -322,12 +501,13 @@ function copyCSV(){
 
 function fallbackCopy(text){
   var ta=document.createElement('textarea');
-  ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  ta.value=text;ta.style.cssText='position:fixed;opacity:0';
   document.body.appendChild(ta);ta.select();
   try{document.execCommand('copy');showToast('CSV kopiert!');}catch(e){showToast('Kopieren nicht möglich');}
   document.body.removeChild(ta);
 }
 
+// ── Karte ──────────────────────────────────────────────
 function initMap(){
   map=L.map('map',{zoomControl:true,attributionControl:true});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -356,7 +536,10 @@ function refreshMarkers(){
   var bounds=[];
   entries.forEach(function(e){
     var m=L.marker([e.lat,e.lng],{icon:getIcon()});
-    var pop='<b style="font-size:13px">'+e.addr+'</b><br><span style="font-size:11px;color:#888">'+e.ts+'</span>'+(e.acc?'<br><span style="font-size:11px;color:#aaa">± '+e.acc+' m</span>':'')+(e.note?'<br><span style="font-size:12px;color:#555">'+e.note+'</span>':'');
+    var pop='<b style="font-size:13px">'+e.addr+'</b>'
+      +'<br><span style="font-size:11px;color:#888">'+e.ts+'</span>'
+      +(e.acc?'<br><span style="font-size:11px;color:#aaa">Genauigkeit: ±'+e.acc+'m'+(e.samples?' ('+e.samples+' Samples)':'')+'</span>':'')
+      +(e.note?'<br><span style="font-size:12px;color:#555">'+e.note+'</span>':'');
     m.bindPopup(pop);
     m.addTo(markersLayer);
     bounds.push([e.lat,e.lng]);
@@ -364,6 +547,7 @@ function refreshMarkers(){
   if(bounds.length)map.fitBounds(bounds,{padding:[40,40],maxZoom:17});
 }
 
+// ── Liste ──────────────────────────────────────────────
 function renderList(){
   var bar=document.getElementById('export-bar');
   var stats=document.getElementById('list-stats');
@@ -381,7 +565,7 @@ function renderList(){
       +'<div class="entry-icon">🚰</div>'
       +'<div class="entry-info">'
       +'<div class="entry-addr">'+e.addr+'</div>'
-      +'<div class="entry-meta">'+e.ts+(e.acc?' &middot; &plusmn;'+e.acc+'m':'')+'</div>'
+      +'<div class="entry-meta">'+e.ts+(e.acc?' &middot; &plusmn;'+e.acc+'m':'')+(e.samples?' &middot; '+e.samples+' Samples':'')+'</div>'
       +(e.note?'<div class="entry-note">'+e.note+'</div>':'')
       +'<div class="entry-coords">'+e.lat.toFixed(6)+', '+e.lng.toFixed(6)+'</div>'
       +'</div>'
